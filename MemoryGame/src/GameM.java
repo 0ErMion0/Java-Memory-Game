@@ -14,7 +14,8 @@ import javax.swing.event.ChangeListener;
 public class GameM implements ActionListener, ChangeListener {
 	JFrame frame = new JFrame("메모리 게임"); // 프레임
 	
-	JPanel field = new JPanel(); // 게임 띄울 필드
+	//JPanel field = new JPanel(); // (삭제)게임 띄울 필드
+	JPanel field; // (추가)게임 띄울 필드
 	JPanel menu = new JPanel(); // 게임 시작 때 필요한 메뉴 버튼들 담을 패널
 	JPanel menu2 = new JPanel();
 	JPanel menu3 = new JPanel();
@@ -22,6 +23,7 @@ public class GameM implements ActionListener, ChangeListener {
 	
 	JPanel showLevel = new JPanel(); // (추가)설정한 레벨 보여줄 패널
 	JPanel setLevel = new JPanel(); // (추가)레벨 설정 슬라이드바 넣을 패널
+	JPanel redoPanel = new JPanel(); // (추가) 게임 진행 중 redo 버튼 넣을 패널
 
 	JPanel start_screen = new JPanel();
 	JPanel end_screen = new JPanel();
@@ -49,6 +51,7 @@ public class GameM implements ActionListener, ChangeListener {
 	private static int highestScore = 0; // 최고 점수
 	
 	String[] board; // 버튼에 표시되는 문자열 저장하는 배열
+	String[] boardSave; //(추가) redo 때를 위한 board 요소 저장하는 배열
 	int[] boardQ=new int[20]; // 버튼 오픈/클로즈 상태값 저장 배열
 	Boolean shown = true; // 버튼 보여진 상태인지 여부
 	int temp=30; // 버튼 클릭 시 임시로 값 저장 변수
@@ -70,9 +73,11 @@ public class GameM implements ActionListener, ChangeListener {
 	//instructW.setWrapStyleWord(true);
 	
 	// (추가) 이미지 파일 등록용
+	ImageIcon hideIcon = new ImageIcon("hideIcon.png"); // 이미지 아이콘
+	ImageIcon[] boardImageIcons; // 보드에 표시할 이미지 아이콘
 	ImageIcon[] imageIcons = new ImageIcon[10]; // 이미지 아이콘
-	Image[] images= new Image[10]; // 이미지 아이콘의 크기 변경 위해 만드는 이미지
-	Image[] changeImages= new Image[10]; // 변경한 이미지 저장
+	ImageIcon[] imageIconsEasy = new ImageIcon[10]; // 이미지 아이콘 어려움 모드
+
 	
 	public GameM(){
 		// 프레임의 사이즈와 위치 설정
@@ -81,6 +86,9 @@ public class GameM implements ActionListener, ChangeListener {
 		
 		frame.setLayout(new BorderLayout());
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		field = new JPanel(); //(추가)
+		
 		
 		start_screen.setLayout(new BorderLayout());
 		menu.setLayout(new BorderLayout());
@@ -114,7 +122,7 @@ public class GameM implements ActionListener, ChangeListener {
         showLevel.add(text);
         setLevel.add(slider);
 		
-//		// 굳이 배치를 이렇게 해야되나
+//		// (삭제)굳이 배치를 이렇게 해야되나
 //		mini.add(easy, BorderLayout.NORTH);
 //		mini.add(hard, BorderLayout.NORTH);
 //		mini.add(inst, BorderLayout.SOUTH);
@@ -138,10 +146,10 @@ public class GameM implements ActionListener, ChangeListener {
 		start_screen.setBackground(Color.RED); // (나중에 지우기)
 		
 		// (추가) 이미지 등록용 - 이미지 크기 조절도 함
-		for(int i = 0; i<10; i++) {
+		for(int i = 0; i<10; i++) { // 쉬움 모드
 			Image image = new ImageIcon((i + 1) + ".png").getImage(); // 이미지 로드
 		    Image scaledImage = image.getScaledInstance(80, 80, java.awt.Image.SCALE_SMOOTH); // 이미지 크기 조정
-		    imageIcons[i] = new ImageIcon(scaledImage); // 크기가 조정된 이미지를 ImageIcon으로 변환
+		    imageIconsEasy[i] = new ImageIcon(scaledImage); // 크기가 조정된 이미지를 ImageIcon으로 변환
 		}
 		
 		frame.add(start_screen, BorderLayout.CENTER);
@@ -154,18 +162,29 @@ public class GameM implements ActionListener, ChangeListener {
 		clearMain(); // clearMain() 메소드를 호출하여 이전에 표시된 화면 지움
 		
 		board = new String[2*x]; // 레벨x2의 크기만큼 문자열 배열 생성
+		boardSave = new String[2*x]; //(추가) 레벨x2의 크기만큼 board 저장용 문자열 배열 생성
+		boardImageIcons = new ImageIcon[2*x]; // (추가)레벨x2의 크기만큼 보드에 표시할 이미지 아이콘 배열 생성
 		for(int i=0;i<(x*2);i++){ // 레벨x2의 크기만큼 반복
 			btn[i] = new JButton(""); // 버튼 배열의 각 요소에 ""을 넣어줌
-			btn[i].setBackground(new Color(220, 220, 220)); // 배경색을 회색으로 설정
+			//btn[i].setBackground(new Color(220, 220, 220)); // (삭제)배경색을 회색으로 설정
+			btn[i].setBackground(Color.white); // (추가)배경색을 흰색으로 설정
 			btn[i].addActionListener(this); // 이벤트 등록
 			btn[i].setEnabled(true); // 버튼을 활성화 상태로 설정
 			field.add(btn[i]); // 필드에 버튼 추가
 		}
 		
 		String[] gameModeHard = {":-D","X","O","-(*.*)-","<>","<(^-^)>","=>",";^P","ABC","123"};//harder version
-		String[] gameModeEasy = {"square","circle","rectangle","heart","diamond","clover","spade","triangle","polygon","tetrahedral"};//easier version
-		if(what) gameMode=gameModeEasy;//if what is true, make the game easy and use c
-		else gameMode=gameModeHard;//otherwise make it hard and use b
+		String[] gameModeEasy = {"   Python","   Coltline","   C","   C++","   C#","   Java","   Linux","   JavaScript","   SQL","   Php"};//easier version
+		if(what) {
+			gameMode=gameModeEasy;//if what is true, make the game easy and use c
+			//for(int i = 0; i<10; i++) {
+				imageIcons = imageIconsEasy; //(추가)
+			//}
+		}
+		else {
+			gameMode=gameModeHard;//otherwise make it hard and use b
+			//imageIcons = imageIconsHard; //(추가)
+		}
 		
 		// 주어진 레벨에 따라 게임 필드에 버튼을 랜덤으로 배치하는 과정(패 섞기 개념)
 		for(int i=0;i<x;i++){ // 레벨 크기만큼
@@ -174,18 +193,37 @@ public class GameM implements ActionListener, ChangeListener {
 						int y = randomGenerator.nextInt(x*2); // 배열 인덱스 숫자 중 하나 랜덤으로(0~레벨x2-1)
 						if(board[y]==null){ // 해당 위치에 이미 버튼이 배치되지 않았는지 확인
 							btn[y].setText(gameMode[i]); // 버튼의 텍스트를 해당 모드용 텍스트로 넣어줌(배열 순서대로)(ex. 레벨1이고 쉬움 모드면 square로만 구성됨)
-							btn[y].setIcon(imageIcons[i]);
+							btn[y].setIcon(imageIcons[i]); // (추가)
 							board[y]=gameMode[i]; // 해당 게임 모드를 저장하여 해당 위치에 버튼이 배치되었음을 표시
+							boardSave[y]=gameMode[i]; //(추가)
+							boardImageIcons[y] = imageIcons[i]; //(추가)
 							break;
 						}
 					}
 				}
 		}
+		
+		redo.addActionListener(this); //(추가)
 		createBoard();
 	}
+//	public void setUpGame2() { //(추가)
+//		for(int i=0;i<(level*2);i++){ // 레벨x2의 크기만큼 반복
+//			//btn[i] = new JButton(""); // 버튼 배열의 각 요소에 ""을 넣어줌
+//			btn[i].setText(boardSave[i]);
+//			btn[i].setIcon(imageIcons[i]);
+//			//btn[i].setBackground(new Color(220, 220, 220)); // (삭제)배경색을 회색으로 설정
+//			btn[i].setBackground(Color.white); // (추가)배경색을 흰색으로 설정
+//			btn[i].addActionListener(this); // 이벤트 등록
+//			btn[i].setEnabled(true); // 버튼을 활성화 상태로 설정
+//			field.add(btn[i]); // 필드에 버튼 추가
+//		}
+//		redo.addActionListener(this);
+//		createBoard();
+//	}
 	public void hideField(int x){//this sets all the boxes blank
 		for(int i=0;i<(x*2);i++){
-			/*if(boardQ[i]==0)*/ btn[i].setText("");		
+			/*if(boardQ[i]==0)*/ btn[i].setText("");
+			btn[i].setIcon(hideIcon); //(추가) 버튼이 클로우즈 상태일 때 보여줄 기본 이미지
 		}
 		shown=false;
 	}
@@ -193,19 +231,23 @@ public class GameM implements ActionListener, ChangeListener {
 		if(board[i]!="done"){//when a match is correctly chosen, it will no longer switch when pressed
 			if(btn[i].getText()==""){
 				btn[i].setText(board[i]);
+				btn[i].setIcon(boardImageIcons[i]); //(추가)
 				//shown=true; // 전체가 다 shown 상태가 아니라서 바꿔주지 않음
 			} else {
 				btn[i].setText("");
+				btn[i].setIcon(hideIcon); //(추가)
 				//shown=false;
 			}
 		}
 	}
 	public void showSpot(int i){
 		btn[i].setText(board[i]);
+		btn[i].setIcon(boardImageIcons[i]); //(추가)
 	}
 	public void showField(int x, String a[]){//this shows all the symbols on the field
 		for(int i=0;i<(x*2);i++){
 			btn[i].setText(a[i]);
+			btn[i].setIcon(boardImageIcons[i]); //(추가)
 		}
 		shown=true;
 	}
@@ -219,7 +261,9 @@ public class GameM implements ActionListener, ChangeListener {
 	}
 	public boolean checkWin(){//checks if every spot is labeled as done
 		for(int i=0;i<(level*2);i++){
-			if (board[i]!="done")return false;
+			if (board[i]!="done") {
+				return false;
+			}
 		}
 		winner();
 		return true;
@@ -229,6 +273,7 @@ public class GameM implements ActionListener, ChangeListener {
         	updateHighestScore();
         	
 			start_screen.remove(field);
+        	start_screen.remove(redoPanel); //(추가)
 			start_screen.add(end_screen, BorderLayout.CENTER);
 			
 			// 7, 14. 최고 점수 구현 및 디자인 수정(추가)
@@ -269,22 +314,54 @@ public class GameM implements ActionListener, ChangeListener {
 	public void goToMainScreen(){
 		new GameM();
 	}
-	public void createBoard(){//this is just gui stuff to show the board
-		//field.setLayout(new BorderLayout()); // (기존코드)필요없어보임 아래에서 레이아웃 바꿔서
+	public void createBoard(){//(삭제)this is just gui stuff to show the board
+		//field.setLayout(new BorderLayout()); // (삭제)필요없어보임 아래에서 레이아웃 바꿔서
+		redoPanel.add(redo); //(추가) 패널에 재시작 버튼 추가
+		start_screen.add(redoPanel, BorderLayout.SOUTH); //(추가) 패널을 start_screen 아래에 추가
 		start_screen.add(field, BorderLayout.CENTER);
 		
 		field.setLayout(new GridLayout(5,4,2,2));
 		field.setBackground(Color.black);
 		field.requestFocus();
+		
 	}
 	public void clearMain(){//clears the main menu so i can add the board or instructions
 		start_screen.remove(menu);
-		 start_screen.remove(menu2);
-		 start_screen.remove(menu3);
+		start_screen.remove(menu2);
+		start_screen.remove(menu3);
 
        start_screen.revalidate();
        start_screen.repaint();
 	}
+//	public void clearGame() {//(추가) 게임 화면 지움
+////		start_screen.remove(field);
+////		start_screen.remove(redoPanel);
+//		
+//		start_screen.revalidate();
+//		start_screen.removeAll(); // 잘 지워짐
+//		start_screen.repaint();
+//		
+////		field.revalidate();
+////		field.removeAll();
+//		
+//		currentScore =0;
+//		shown = true;
+//		eh = true;
+//		purgatory = false;
+//		shown = false;
+//		game_over = false;
+//		
+////		for(int i = 0; i < level*2; i++) {
+////			// 짝 맞추어진 패는 board의 텍스트가 done이 되기 때문에 오잉 이건 상관없나
+////			board[i] = boardSave[i]; // "done"으로 표시되었던거 없애줌
+////			
+////			//btn[i].setText(board[i]);
+////		}
+//		temp =30;
+//		temp2 = 30;		
+//		//start_screen.revalidate();
+//		//start_screen.repaint();
+//	}
     // 최고점수 갱신
     private void updateHighestScore() {
         if (currentScore > highestScore) {
@@ -351,7 +428,36 @@ public class GameM implements ActionListener, ChangeListener {
 		if(source==redo) { // 패 다시 로드(추가)
 			// 지금 화면 지우고
 			// 버튼 화면 재로드
+			//clearGame();
+		
+			//System.out.println("redo 눌림"); // 이건 잘 눌리는데 뭐지
+			//setUpGame2();
 			
+			// clearGame 내용, 화면 지워져야 해
+//			start_screen.revalidate();
+//			start_screen.removeAll(); // 잘 지워짐.. 왜 안되냐 이젠
+			
+			// 문자, 아이콘들 다 뒤집기
+			for(int i =0; i<level*2; i++) {
+				btn[i].setText(boardSave[i]);
+				btn[i].setIcon(boardImageIcons[i]);
+				board[i]=boardSave[i]; // 기존의 상태가 남아있지 않도록 기존 값 저장해놓은 배열로 덮어씌움(처음부터 다시 할 수 있도록)
+				// 이거 안하면 한번 뒤집기 성공한 카드를 redo하여 뒤집어진 카드 뒤집어서 패 확인하려고 하면 안 뒤집어짐 -> "done" 상태라서
+			}
+			
+			currentScore =0;
+			shown = true;
+			eh = true;
+			purgatory = false;
+			shown = true;
+			game_over = false;
+			temp =30;
+			temp2 = 30;
+			
+			//start_screen.remove(field);
+		    //start_screen.revalidate();
+		    //start_screen.repaint();
+			//createBoard(); // 문제점.. 예전 그대로의 상태대로 나타난다..
 		}
 		if(source==goBack){//back to main screen
 		    frame.dispose();  
